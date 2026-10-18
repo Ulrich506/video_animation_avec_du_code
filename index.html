@@ -338,7 +338,6 @@
       drawBadge(572, 508, "SYSADMIN", C.pink);
       drawChibi(1370 + (1 - enter) * 570, 1005, 1.05, p > .54 ? "wave" : "idle", localTime("intro"));
       if (p > .46) drawSpeech(1120, 295, 430, 88, "Prêt pour la prochaine quête ?", C.cyan, "right");
-      if (p < .15) drawFlash(1 - p / .15, "#c7fbff");
     }
     function drawEducation(p) {
       drawHeader("FORMATION  /  CODEX", 2);
@@ -492,10 +491,11 @@
         recordingChunks = [];
         const stream = canvas.captureStream(30);
         recorder = new MediaRecorder(stream, { mimeType });
+        [playButton, pauseButton, restartButton, exportButton].forEach(button => { button.disabled = true; });
         recorder.ondataavailable = event => { if (event.data.size) recordingChunks.push(event.data); };
         recorder.onerror = event => {
           statusEl.textContent = `Erreur d’enregistrement : ${event.error?.message || "échec MediaRecorder"}`;
-          exportButton.disabled = false;
+          [playButton, pauseButton, restartButton, exportButton].forEach(button => { button.disabled = false; });
           stream.getTracks().forEach(track => track.stop());
         };
         recorder.onstop = () => {
@@ -508,14 +508,13 @@
             setTimeout(() => URL.revokeObjectURL(url), 1000);
             statusEl.textContent = "Vidéo exportée : root-cv-anime.webm";
           }
-          exportButton.disabled = false;
+          [playButton, pauseButton, restartButton, exportButton].forEach(button => { button.disabled = false; });
         };
         recorder.start(1000);
-        exportButton.disabled = true;
         statusEl.textContent = "Enregistrement en cours : la vidéo dure 60 secondes.";
         timeline.restart();
       } catch (error) {
-        exportButton.disabled = false;
+        [playButton, pauseButton, restartButton, exportButton].forEach(button => { button.disabled = false; });
         statusEl.textContent = `Impossible de démarrer l’export : ${error.message}`;
       }
     }
