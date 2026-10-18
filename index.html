@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090817">
+  <title>Root — CV animé</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #090817;
+      --panel: #15142b;
+      --cyan: #55f6ff;
+      --pink: #ff4fa6;
+      --violet: #9b7bff;
+      --text: #f7f5ff;
+      --muted: #b7b2d0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 50% 0%, #25204b 0, transparent 55%),
+        var(--ink);
+      font-family: Inter, "Trebuchet MS", Arial, sans-serif;
+    }
+    .app { width: min(100%, 1280px); }
+    .stage {
+      overflow: hidden;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: 1px solid #9b7bff80;
+      border-radius: 16px;
+      background: #090817;
+      box-shadow: 0 0 60px #8d4bff26, 0 0 0 4px #ffffff08;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .controls {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 14px 2px 0;
+    }
+    button {
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid #ffffff24;
+      border-radius: 9px;
+      color: var(--text);
+      background: #1b1933;
+      font: 700 14px/1 inherit;
+      cursor: pointer;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+    button:hover { transform: translateY(-2px); border-color: var(--cyan); background: #252143; }
+    button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+    button.primary { color: #091016; border: 0; background: linear-gradient(100deg, var(--cyan), #91ffd8); }
+    button.export { border-color: #ff4fa680; background: #31162e; }
+    button:disabled { cursor: wait; opacity: .65; transform: none; }
+    .readout {
+      display: flex;
+      align-items: center;
+      flex: 1 1 200px;
+      gap: 12px;
+      min-width: 180px;
+      margin-left: 4px;
+      color: var(--muted);
+      font: 12px ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+    .track { height: 5px; flex: 1; overflow: hidden; border-radius: 9px; background: #ffffff1b; }
+    .progress { width: 0; height: 100%; background: linear-gradient(90deg, var(--violet), var(--cyan), var(--pink)); }
+    .hint { width: 100%; margin: 2px 0 0; color: #aaa4c5; font-size: 12px; }
+    @media (max-width: 600px) {
+      body { padding: 12px; }
+      .stage { border-radius: 9px; }
+      .controls { gap: 7px; }
+      button { min-height: 38px; padding: 0 11px; font-size: 12px; }
+      .readout { order: 1; flex-basis: 100%; margin: 3px 0 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="stage">
+      <canvas id="cv" width="1920" height="1080" aria-label="CV animé de Root"></canvas>
+    </div>
+    <div class="controls" aria-label="Commandes de l'animation">
+      <button id="play" class="primary" type="button">▶ Lecture</button>
+      <button id="pause" type="button">Ⅱ Pause</button>
+      <button id="restart" type="button">↺ Recommencer</button>
+      <button id="export" class="export" type="button">⬇ Exporter en vidéo</button>
+      <div class="readout">
+        <span id="clock">00:00 / 01:00</span>
+        <div class="track"><div id="progress" class="progress"></div></div>
+      </div>
+      <p id="status" class="hint" role="status">Astuce : modifiez les textes et les durées dans l’objet CONFIG, en bas du fichier.</p>
+    </div>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script>
+    "use strict";
+
+    // Modifiez ici les durées (leur somme doit rester égale à 60 secondes).
+    const SCENE_DURATIONS = {
+      intro: 6,
+      formation: 10,
+      skills: 14,
+      projects: 16,
+      experience: 8,
+      contact: 6
+    };
+    const CONFIG = {
+      name: "Root",
+      role: "DÉVELOPPEUR FULL-STACK / SYSADMIN",
+      education: ["ÉCOLE NATIONALE D’INFORMATIQUE", "Université de Fianarantsoa", "Parcours SDI  •  Niveau L3", "Madagascar"],
+      skills: [
+        { name: "WEB FULL-STACK", value: 88, tags: "React  •  Vue  •  PHP  •  Odoo" },
+        { name: "SYSTÈMES & RÉSEAUX", value: 82, tags: "Linux Ubuntu  •  pfSense  •  Asterisk / VoIP" },
+        { name: "CYBERSÉCURITÉ", value: 72, tags: "Sécurité réseau  •  bonnes pratiques" },
+        { name: "DÉVELOPPEMENT MOBILE", value: 68, tags: "Kotlin  •  Jetpack Compose" }
+      ],
+      projects: [
+        { title: "A2 BILLING", type: "QUÊTE • PLATEFORME VOIP", desc: "Plateforme de facturation connectée à Asterisk", color: "#55f6ff", icon: "☎" },
+        { title: "GESTION D’ÉTAT CIVIL", type: "QUÊTE • MODULE ODOO", desc: "Gestion numérique des actes et dossiers", color: "#ff65b4", icon: "◇" },
+        { title: "RICHVENTE", type: "QUÊTE • MARKETPLACE", desc: "Marketplace full-stack pour vendre en ligne", color: "#a78bff", icon: "✦" }
+      ],
+      experience: ["À LA RECHERCHE D’UN STAGE", "Prêt à relever de nouveaux défis", "Développement • Systèmes • Réseaux"],
+      contact: { email: "votre.email@example.com", github: "github.com/votre-profil", portfolio: "votre-portfolio.dev" },
+      colors: { bg: "#090817", panel: "#15142b", cyan: "#55f6ff", pink: "#ff4fa6", violet: "#9b7bff", white: "#f7f5ff", muted: "#b7b2d0" }
+    };
+
+    const TOTAL_DURATION = Object.values(SCENE_DURATIONS).reduce((sum, n) => sum + n, 0);
+    if (TOTAL_DURATION !== 60) throw new Error("La somme de SCENE_DURATIONS doit être de 60 secondes.");
+
+    const canvas = document.querySelector("#cv");
+    const ctx = canvas.getContext("2d");
+    const clock = document.querySelector("#clock");
+    const progressEl = document.querySelector("#progress");
+    const statusEl = document.querySelector("#status");
+    const playButton = document.querySelector("#play");
+    const pauseButton = document.querySelector("#pause");
+    const restartButton = document.querySelector("#restart");
+    const exportButton = document.querySelector("#export");
+    const W = canvas.width, H = canvas.height;
+    const C = CONFIG.colors;
+    const sceneOrder = Object.keys(SCENE_DURATIONS);
+    const sceneStart = {};
+    let accumulated = 0;
+    for (const scene of sceneOrder) {
+      sceneStart[scene] = accumulated;
+      accumulated += SCENE_DURATIONS[scene];
+    }
+    const state = { time: 0 };
+    let recorder = null;
+    let recordingChunks = [];
+
+    // Palette de particules déterministe : le décor reste stable au redémarrage.
+    const particles = Array.from({ length: 95 }, (_, i) => ({
+      x: (i * 7919 % 1920), y: (i * 3571 % 1080),
+      r: 1.5 + (i % 4) * 1.2, phase: i * 1.71, speed: .35 + (i % 5) * .12
+    }));
+
+    const clamp = (v, min = 0, max = 1) => Math.max(min, Math.min(max, v));
+    const smooth = (v) => { const x = clamp(v); return x * x * (3 - 2 * x); };
+    const sceneProgress = (name) => clamp((state.time - sceneStart[name]) / SCENE_DURATIONS[name]);
+    const localTime = (name) => Math.max(0, state.time - sceneStart[name]);
+
+    function roundedRect(x, y, w, h, r, fill, stroke, lineWidth = 2) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, r);
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke) { ctx.lineWidth = lineWidth; ctx.strokeStyle = stroke; ctx.stroke(); }
+    }
+    function text(str, x, y, size, color = C.white, weight = 700, align = "left", font = "Inter, Arial, sans-serif") {
+      ctx.fillStyle = color; ctx.font = `${weight} ${size}px ${font}`;
+      ctx.textAlign = align; ctx.textBaseline = "middle"; ctx.fillText(str, x, y);
+    }
+    function glowText(str, x, y, size, color, align = "left") {
+      ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 26;
+      text(str, x, y, size, color, 900, align); ctx.restore();
+    }
+    function panel(x, y, w, h, accent = C.violet) {
+      roundedRect(x, y, w, h, 20, "#111025eF", `${accent}80`, 2);
+      ctx.save(); ctx.globalAlpha = .14; ctx.fillStyle = accent;
+      ctx.fillRect(x + 2, y + 2, w - 4, 5); ctx.restore();
+      // Petits repères d’interface façon menu de jeu.
+      ctx.fillStyle = accent;
+      ctx.fillRect(x + 18, y + 18, 14, 3); ctx.fillRect(x + 18, y + 18, 3, 14);
+      ctx.fillRect(x + w - 32, y + h - 21, 14, 3); ctx.fillRect(x + w - 21, y + h - 32, 3, 14);
+    }
+    function drawBackground(t, accent = C.violet) {
+      const gradient = ctx.createLinearGradient(0, 0, W, H);
+      gradient.addColorStop(0, "#100d25"); gradient.addColorStop(.52, C.bg); gradient.addColorStop(1, "#10172a");
+      ctx.fillStyle = gradient; ctx.fillRect(0, 0, W, H);
+      ctx.save();
+      ctx.globalAlpha = .2;
+      for (let x = -120; x < W + 160; x += 120) {
+        ctx.strokeStyle = accent; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x - 260, H); ctx.stroke();
+      }
+      ctx.restore();
+      // Horizon lumineux et sol en perspective.
+      const horizon = ctx.createRadialGradient(960, 730, 10, 960, 730, 800);
+      horizon.addColorStop(0, `${accent}20`); horizon.addColorStop(1, "transparent");
+      ctx.fillStyle = horizon; ctx.fillRect(0, 430, W, 650);
+      ctx.save(); ctx.globalAlpha = .16; ctx.strokeStyle = accent; ctx.lineWidth = 2;
+      for (let i = 0; i < 14; i++) {
+        const y = 730 + i * i * 2.1;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+      for (let x = -400; x <= W + 400; x += 180) {
+        ctx.beginPath(); ctx.moveTo(960, 695); ctx.lineTo(x, H); ctx.stroke();
+      }
+      ctx.restore();
+      for (const p of particles) {
+        const twinkle = .25 + .75 * Math.abs(Math.sin(t * p.speed + p.phase));
+        ctx.globalAlpha = twinkle * .72; ctx.fillStyle = p.phase % 3 > 1 ? C.cyan : C.white;
+        ctx.beginPath(); ctx.arc(p.x, (p.y + t * p.speed * 15) % H, p.r, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    function drawSpeedLines(amount, t, color = C.cyan) {
+      if (amount <= 0) return;
+      ctx.save(); ctx.globalAlpha = amount * .35; ctx.strokeStyle = color; ctx.lineWidth = 3;
+      for (let i = 0; i < 30; i++) {
+        const y = (i * 83 + 17) % H, x = ((i * 197 + t * 1300) % (W + 500)) - 250;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 150 + (i % 4) * 50, y - 35); ctx.stroke();
+      }
+      ctx.restore();
+    }
+    function drawFlash(amount, color = "#ffffff") {
+      if (amount <= 0) return;
+      ctx.save(); ctx.globalAlpha = clamp(amount) * .62; ctx.fillStyle = color; ctx.fillRect(0, 0, W, H); ctx.restore();
+    }
+    function drawHeader(section, index) {
+      text("ROOT.EXE", 74, 58, 22, C.cyan, 900);
+      text("RÉSUMÉ DE PERSONNAGE  /  MODE AVENTURE", 74, 91, 14, C.muted, 700);
+      text(`${String(index).padStart(2, "0")}  /  06`, 1844, 61, 18, C.white, 800, "right");
+      ctx.fillStyle = "#ffffff28"; ctx.fillRect(74, 119, 1770, 2);
+      text(section, 74, 157, 18, C.pink, 800);
+    }
+    function drawSpeech(x, y, w, h, message, accent = C.cyan, tail = "left") {
+      roundedRect(x, y, w, h, 24, "#f8f6ff", accent, 4);
+      ctx.beginPath();
+      if (tail === "left") { ctx.moveTo(x + 56, y + h - 2); ctx.lineTo(x + 30, y + h + 28); ctx.lineTo(x + 88, y + h - 2); }
+      else { ctx.moveTo(x + w - 56, y + h - 2); ctx.lineTo(x + w - 30, y + h + 28); ctx.lineTo(x + w - 88, y + h - 2); }
+      ctx.closePath(); ctx.fillStyle = "#f8f6ff"; ctx.fill(); ctx.strokeStyle = accent; ctx.lineWidth = 4; ctx.stroke();
+      text(message, x + w / 2, y + h / 2, 25, "#17152e", 800, "center");
+    }
+
+    // Mascotte chibi vectorielle dessinée directement dans le canvas.
+    function drawChibi(x, y, scale, pose, t) {
+      ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
+      const bounce = pose === "jump" ? -Math.abs(Math.sin(t * 9)) * 54 : Math.sin(t * 3.3) * 8;
+      ctx.translate(0, bounce);
+      // Ombre au sol.
+      ctx.globalAlpha = .3; ctx.fillStyle = "#02020a";
+      ctx.beginPath(); ctx.ellipse(0, 9, 115, 20, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+      // Jambes et hoodie.
+      roundedRect(-63, -108, 42, 89, 16, "#282344", "#111020", 5);
+      roundedRect(20, -108, 42, 89, 16, "#282344", "#111020", 5);
+      roundedRect(-85, -268, 170, 185, 48, "#8156d9", "#d0baff", 6);
+      ctx.fillStyle = "#9a75f2"; ctx.beginPath(); ctx.arc(0, -268, 53, Math.PI, 0); ctx.fill();
+      // Cordon du hoodie.
+      ctx.strokeStyle = "#d8c8ff"; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(-17, -230); ctx.lineTo(-21, -178); ctx.moveTo(17, -230); ctx.lineTo(21, -178); ctx.stroke();
+      // Bras, le bras droit salue / pointe.
+      ctx.save(); ctx.translate(74, -237);
+      if (pose === "wave") ctx.rotate(-.65 + Math.sin(t * 12) * .36);
+      else if (pose === "point") ctx.rotate(-.9);
+      else if (pose === "type") ctx.rotate(.6 + Math.sin(t * 14) * .1);
+      else ctx.rotate(.12);
+      roundedRect(-6, -18, 32, 104, 15, "#8156d9", "#d0baff", 5);
+      ctx.fillStyle = "#ffd0bb"; ctx.beginPath(); ctx.arc(11, 91, 19, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.save(); ctx.translate(-76, -236); ctx.rotate(.2);
+      roundedRect(-6, -17, 32, 100, 15, "#8156d9", "#d0baff", 5);
+      ctx.fillStyle = "#ffd0bb"; ctx.beginPath(); ctx.arc(9, 88, 18, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      // Tête et cheveux courts noirs.
+      ctx.fillStyle = "#ffd5c4"; ctx.strokeStyle = "#10101b"; ctx.lineWidth = 7;
+      ctx.beginPath(); ctx.ellipse(0, -359, 104, 111, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#11111b";
+      ctx.beginPath(); ctx.moveTo(-102, -374); ctx.quadraticCurveTo(-122, -480, -35, -475);
+      ctx.quadraticCurveTo(7, -519, 48, -472); ctx.quadraticCurveTo(117, -473, 104, -365);
+      ctx.lineTo(73, -395); ctx.lineTo(51, -367); ctx.lineTo(23, -398);
+      ctx.lineTo(-8, -364); ctx.lineTo(-41, -397); ctx.lineTo(-75, -365); ctx.closePath(); ctx.fill();
+      // Yeux : clin d’œil périodique.
+      const blink = Math.sin(t * 2.7) > .985;
+      ctx.strokeStyle = "#17152c"; ctx.lineWidth = 5;
+      if (blink) {
+        ctx.beginPath(); ctx.moveTo(-59, -365); ctx.lineTo(-29, -365); ctx.moveTo(29, -365); ctx.lineTo(59, -365); ctx.stroke();
+      } else {
+        ctx.fillStyle = "#272039"; ctx.beginPath(); ctx.ellipse(-43, -365, 10, 19, 0, 0, 7); ctx.ellipse(43, -365, 10, 19, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(-46, -374, 4, 0, 7); ctx.arc(40, -374, 4, 0, 7); ctx.fill();
+      }
+      // Lunettes.
+      ctx.strokeStyle = "#141321"; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.roundRect(-72, -391, 59, 49, 13); ctx.roundRect(13, -391, 59, 49, 13);
+      ctx.moveTo(-13, -371); ctx.lineTo(13, -371); ctx.stroke();
+      // Bouche animée pendant les scènes.
+      ctx.fillStyle = "#aa3f62";
+      if (Math.sin(t * 8) > .2 && pose !== "idle") {
+        ctx.beginPath(); ctx.ellipse(0, -319, 9, 12 + Math.abs(Math.sin(t * 8)) * 6, 0, 0, 7); ctx.fill();
+      } else {
+        ctx.strokeStyle = "#9d425b"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, -328, 15, .15, Math.PI - .15); ctx.stroke();
+      }
+      ctx.fillStyle = "#ff96a8"; ctx.beginPath(); ctx.arc(-75, -333, 12, 0, 7); ctx.arc(75, -333, 12, 0, 7); ctx.fill();
+      // Laptop visible en pose de frappe.
+      if (pose === "type" || pose === "idle") {
+        roundedRect(-91, -135, 182, 111, 12, "#24253c", C.cyan, 5);
+        ctx.fillStyle = "#162337"; ctx.fillRect(-80, -124, 160, 89);
+        text("root_", 0, -79, 23, C.cyan, 800, "center", "ui-monospace, monospace");
+        ctx.beginPath(); ctx.moveTo(-112, -20); ctx.lineTo(112, -20); ctx.lineTo(91, 0); ctx.lineTo(-91, 0); ctx.closePath();
+        ctx.fillStyle = "#c6c5d5"; ctx.fill(); ctx.strokeStyle = "#818198"; ctx.lineWidth = 3; ctx.stroke();
+      }
+      ctx.restore();
+    }
+    function drawBadge(x, y, label, accent) {
+      roundedRect(x, y, 178, 46, 22, `${accent}20`, `${accent}90`, 2);
+      text(`✦  ${label}`, x + 89, y + 23, 16, accent, 800, "center");
+    }
+    function drawIntro(p) {
+      drawHeader("INITIALISATION", 1);
+      const enter = smooth(p * 2.2);
+      drawSpeedLines(1 - Math.abs(p - .15) * 4, localTime("intro"), C.cyan);
+      glowText("ROOT", 178, 365, 144, C.white);
+      text("NOM DE CODE", 184, 260, 21, C.cyan, 800);
+      text(CONFIG.role, 184, 452, 29, C.pink, 800);
+      drawBadge(184, 508, "LVL 03", C.violet);
+      drawBadge(378, 508, "FULL-STACK", C.cyan);
+      drawBadge(572, 508, "SYSADMIN", C.pink);
+      drawChibi(1370 + (1 - enter) * 570, 1005, 1.05, p > .54 ? "wave" : "idle", localTime("intro"));
+      if (p > .46) drawSpeech(1120, 295, 430, 88, "Prêt pour la prochaine quête ?", C.cyan, "right");
+      if (p < .15) drawFlash(1 - p / .15, "#c7fbff");
+    }
+    function drawEducation(p) {
+      drawHeader("FORMATION  /  CODEX", 2);
+      panel(180, 245, 1040, 510, C.violet);
+      text("PARCOURS ACADÉMIQUE", 240, 315, 24, C.cyan, 800);
+      text(CONFIG.education[0], 240, 405, 39, C.white, 900);
+      text(CONFIG.education[1], 240, 472, 29, C.muted, 600);
+      text(CONFIG.education[2], 240, 552, 29, C.pink, 800);
+      drawBadge(240, 620, CONFIG.education[3].toUpperCase(), C.cyan);
+      // Insigne circulaire inspiré d'un emblème RPG.
+      ctx.save(); ctx.translate(1000, 505); ctx.rotate((1 - p) * 1.2);
+      ctx.strokeStyle = C.violet; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(0, 0, 112, 0, 7); ctx.stroke();
+      ctx.strokeStyle = C.cyan; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, 91, 0, 7); ctx.stroke();
+      glowText("SDI", 0, -2, 53, C.white, "center"); text("NIVEAU L3", 0, 53, 15, C.cyan, 800, "center");
+      ctx.restore();
+      drawChibi(1510, 1002, .83, "point", localTime("formation"));
+      if (p > .26) drawSpeech(1290, 300, 435, 86, "Ma base de connaissances !", C.violet, "right");
+      drawFlash(Math.max(0, 1 - p * 9), "#d8d0ff");
+    }
+    function drawSkills(p) {
+      drawHeader("COMPÉTENCES  /  ATTRIBUTS", 3);
+      const list = CONFIG.skills;
+      list.forEach((skill, i) => {
+        const y = 238 + i * 158;
+        panel(150, y, 1130, 126, i % 2 ? C.violet : C.cyan);
+        text(skill.name, 194, y + 37, 24, C.white, 900);
+        text(skill.tags, 194, y + 82, 19, C.muted, 600);
+        roundedRect(790, y + 47, 410, 24, 12, "#ffffff16");
+        const reveal = smooth((p * 5.3 - i * .82));
+        const barGradient = ctx.createLinearGradient(790, 0, 1200, 0);
+        barGradient.addColorStop(0, C.violet); barGradient.addColorStop(1, C.cyan);
+        roundedRect(790, y + 47, 410 * (skill.value / 100) * reveal, 24, 12, barGradient);
+        text(`${Math.round(skill.value * reveal)}%`, 1230, y + 59, 22, C.cyan, 900, "right");
+      });
+      drawChibi(1530, 1010, .68, p > .65 ? "jump" : "point", localTime("skills"));
+      if (p > .12 && p < .85) drawSpeech(1320, 210, 390, 80, "Stats en progression !", C.cyan, "right");
+      drawSpeedLines(Math.max(0, 1 - Math.abs(p - .08) * 9), localTime("skills"));
+    }
+    function drawProjects(p) {
+      drawHeader("PROJETS  /  QUÊTES ACCOMPLIES", 4);
+      const cards = CONFIG.projects;
+      const cardW = 500, gap = 40, startX = 170;
+      cards.forEach((project, i) => {
+        const delay = i * .19;
+        const reveal = smooth((p - delay) * 5);
+        const x = startX + i * (cardW + gap);
+        const y = 320 + (1 - reveal) * 180 + Math.sin(localTime("projects") * 3 + i) * 5;
+        ctx.save(); ctx.globalAlpha = reveal;
+        panel(x, y, cardW, 430, project.color);
+        roundedRect(x + 32, y + 32, cardW - 64, 190, 22, `${project.color}18`, `${project.color}55`, 2);
+        glowText(project.icon, x + cardW / 2, y + 126, 91, project.color, "center");
+        text(project.type, x + 34, y + 266, 16, project.color, 800);
+        text(project.title, x + 34, y + 314, project.title.length > 17 ? 24 : 31, C.white, 900);
+        text(project.desc, x + 34, y + 365, 18, C.muted, 600);
+        text("★  QUÊTE VALIDÉE", x + 34, y + 405, 15, "#ffe68a", 800);
+        ctx.restore();
+      });
+      drawChibi(960, 1012, .46, "type", localTime("projects"));
+      if (p > .09 && p < .8) drawSpeech(735, 208, 450, 80, "Voici quelques quêtes !", C.pink, "left");
+    }
+    function drawExperience(p) {
+      drawHeader("EXPÉRIENCE  /  PROCHAINE ÉTAPE", 5);
+      panel(180, 258, 1120, 495, C.pink);
+      text("NOUVELLE QUÊTE DISPONIBLE", 245, 330, 22, C.cyan, 800);
+      glowText(CONFIG.experience[0], 245, 420, 43, C.white);
+      text(CONFIG.experience[1], 245, 500, 29, C.muted, 600);
+      text(CONFIG.experience[2], 245, 568, 23, C.pink, 800);
+      drawBadge(245, 647, "MOTIVÉ", C.cyan);
+      drawBadge(440, 647, "CURIEUX", C.violet);
+      drawChibi(1510, 1004, .86, "wave", localTime("experience"));
+      if (p > .26) drawSpeech(1295, 300, 420, 85, "Et si on travaillait ensemble ?", C.pink, "right");
+      drawFlash(Math.max(0, 1 - p * 8), "#ffe3f2");
+    }
+    function drawContact(p) {
+      drawHeader("CONTACT  /  FIN DE TRANSMISSION", 6);
+      panel(170, 255, 1120, 545, C.cyan);
+      text("ON CONNECTE ?", 235, 330, 24, C.pink, 900);
+      glowText("RECRUTEZ-MOI !", 235, 414, 68, C.white);
+      const rows = [
+        ["✉", CONFIG.contact.email],
+        ["⌘", CONFIG.contact.github],
+        ["↗", CONFIG.contact.portfolio]
+      ];
+      rows.forEach((row, i) => {
+        const y = 515 + i * 72;
+        text(row[0], 250, y, 29, C.cyan, 900);
+        text(row[1], 300, y, 25, C.white, 700);
+      });
+      drawChibi(1510, 1000, .9, "wave", localTime("contact"));
+      if (p > .2) drawSpeech(1300, 294, 410, 90, "À bientôt !  (≧▽≦)", C.cyan, "right");
+      const flash = p < .08 ? 1 - p / .08 : 0;
+      drawFlash(flash, "#ffffff");
+    }
+
+    function render() {
+      const t = clamp(state.time, 0, TOTAL_DURATION);
+      drawBackground(t);
+      let scene = "contact";
+      for (let i = 0; i < sceneOrder.length; i++) {
+        const name = sceneOrder[i];
+        if (t < sceneStart[name] + SCENE_DURATIONS[name] || i === sceneOrder.length - 1) { scene = name; break; }
+      }
+      const p = sceneProgress(scene);
+      // Flash bref aux changements de scène pour souligner les transitions.
+      const intoScene = t - sceneStart[scene];
+      const transitionFlash = scene === "intro" ? 0 : Math.max(0, 1 - intoScene / .22);
+      switch (scene) {
+        case "intro": drawIntro(p); break;
+        case "formation": drawEducation(p); break;
+        case "skills": drawSkills(p); break;
+        case "projects": drawProjects(p); break;
+        case "experience": drawExperience(p); break;
+        case "contact": drawContact(p); break;
+      }
+      if (transitionFlash > 0) drawFlash(transitionFlash * .35, "#ffffff");
+      const seconds = Math.floor(t);
+      clock.textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")} / 01:00`;
+      progressEl.style.width = `${(t / TOTAL_DURATION) * 100}%`;
+    }
+
+    if (!window.gsap) {
+      statusEl.textContent = "GSAP n’a pas pu être chargé. Vérifiez votre connexion Internet pour activer la timeline.";
+      throw new Error("GSAP est requis pour piloter la timeline.");
+    }
+    // Unique timeline maître : tout le rendu est déterminé par son temps global.
+    const timeline = gsap.timeline({ paused: true, onUpdate: render, onComplete: onTimelineComplete });
+    timeline.to(state, { time: TOTAL_DURATION, duration: TOTAL_DURATION, ease: "none" });
+    render();
+    playButton.addEventListener("click", () => {
+      if (state.time >= TOTAL_DURATION) timeline.restart();
+      else timeline.play();
+    });
+    pauseButton.addEventListener("click", () => timeline.pause());
+    restartButton.addEventListener("click", () => { timeline.pause(0); render(); });
+
+    function onTimelineComplete() {
+      if (recorder && recorder.state !== "inactive") recorder.stop();
+    }
+    function startExport() {
+      if (!canvas.captureStream || !window.MediaRecorder) {
+        statusEl.textContent = "L’export WebM n’est pas pris en charge par ce navigateur.";
+        return;
+      }
+      const mimeType = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]
+        .find(type => MediaRecorder.isTypeSupported(type));
+      if (!mimeType) {
+        statusEl.textContent = "Aucun encodeur WebM compatible n’a été trouvé dans ce navigateur.";
+        return;
+      }
+      try {
+        recordingChunks = [];
+        const stream = canvas.captureStream(30);
+        recorder = new MediaRecorder(stream, { mimeType });
+        recorder.ondataavailable = event => { if (event.data.size) recordingChunks.push(event.data); };
+        recorder.onerror = event => {
+          statusEl.textContent = `Erreur d’enregistrement : ${event.error?.message || "échec MediaRecorder"}`;
+          exportButton.disabled = false;
+          stream.getTracks().forEach(track => track.stop());
+        };
+        recorder.onstop = () => {
+          stream.getTracks().forEach(track => track.stop());
+          if (recordingChunks.length) {
+            const blob = new Blob(recordingChunks, { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url; link.download = "root-cv-anime.webm"; link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            statusEl.textContent = "Vidéo exportée : root-cv-anime.webm";
+          }
+          exportButton.disabled = false;
+        };
+        recorder.start(1000);
+        exportButton.disabled = true;
+        statusEl.textContent = "Enregistrement en cours : la vidéo dure 60 secondes.";
+        timeline.restart();
+      } catch (error) {
+        exportButton.disabled = false;
+        statusEl.textContent = `Impossible de démarrer l’export : ${error.message}`;
+      }
+    }
+    exportButton.addEventListener("click", startExport);
+  </script>
+</body>
+</html>
