@@ -1,0 +1,107 @@
+:root {
+  color-scheme: dark;
+  --background: #141210;
+  --surface: #201d19;
+  --surface-raised: #29241f;
+  --line: #ffffff19;
+  --orange: #e8894e;
+  --orange-light: #ffb477;
+  --text: #f5f0e9;
+  --muted: #b8ada1;
+  font-family: Inter, "Aptos", "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  padding: 32px clamp(14px, 4vw, 56px);
+  color: var(--text);
+  background:
+    radial-gradient(ellipse at 50% -24%, #67432c55 0, transparent 55%),
+    var(--background);
+}
+
+.app { width: min(100%, 1440px); margin: 0 auto; }
+.page-heading { padding: 0 2px 20px; }
+.eyebrow { color: var(--orange-light); font-size: 11px; font-weight: 800; letter-spacing: .2em; }
+h1 { margin: 8px 0 0; font-size: clamp(21px, 3vw, 34px); letter-spacing: -.04em; }
+h1 span { color: var(--muted); font-size: .63em; font-weight: 500; letter-spacing: -.015em; }
+
+.studio {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #191613;
+  box-shadow: 0 24px 80px #0005;
+}
+
+.stage {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  place-items: center;
+  overflow: hidden;
+  background: #11100e;
+}
+.stage[data-format="tablet"] { aspect-ratio: 4 / 3; }
+.stage[data-format="phone"] {
+  width: min(100%, 450px);
+  aspect-ratio: 9 / 16;
+  margin-inline: auto;
+}
+.stage[data-format="foldable"] {
+  width: min(100%, 620px);
+  aspect-ratio: 4 / 5;
+  margin-inline: auto;
+}
+canvas { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+.control-panel { display: grid; gap: 15px; padding: 18px 20px 14px; }
+.transport, .export-options, .timeline-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.button, select {
+  min-height: 40px;
+  border: 1px solid #ffffff24;
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface-raised);
+  font: inherit;
+}
+.button { padding: 0 15px; font-size: 13px; font-weight: 700; cursor: pointer; transition: border-color .16s, background .16s, transform .16s; }
+.button:hover { transform: translateY(-1px); border-color: #e8894eaa; background: #33271e; }
+.button:focus-visible, select:focus-visible, .seek:focus-visible { outline: 2px solid var(--orange-light); outline-offset: 3px; }
+.button-primary { border-color: var(--orange); color: #1c130d; background: var(--orange); }
+.button-primary:hover { border-color: var(--orange-light); background: var(--orange-light); }
+.button-export { margin-left: auto; border-color: #e8894e99; color: #ffd0a7; }
+.button:disabled { cursor: wait; opacity: .55; transform: none; }
+.timeline-row { gap: 14px; }
+.clock { min-width: 98px; color: var(--muted); font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; }
+.seek { flex: 1 1 200px; height: 5px; accent-color: var(--orange); cursor: pointer; }
+.export-options { padding-top: 3px; border-top: 1px solid var(--line); }
+.select-label { display: grid; gap: 5px; color: var(--muted); font-size: 11px; font-weight: 700; }
+select { min-width: 180px; padding: 0 30px 0 11px; font-size: 12px; cursor: pointer; }
+.status { min-height: 17px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+footer { padding: 12px 3px 0; color: #93887d; font-size: 11px; }
+footer a { color: #edaa77; text-decoration-color: #edaa7766; }
+
+@media (max-width: 620px) {
+  body { padding: 18px 10px; }
+  .page-heading { padding: 0 3px 13px; }
+  h1 span { display: block; margin-top: 5px; }
+  .studio { border-radius: 11px; }
+  .control-panel { gap: 12px; padding: 13px 12px; }
+  .transport { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .button { min-height: 38px; padding: 0 8px; font-size: 11px; }
+  .export-options { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  select { min-width: 0; width: 100%; }
+  .button-export { grid-column: 1 / -1; width: 100%; margin: 0; }
+  .timeline-row { gap: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
